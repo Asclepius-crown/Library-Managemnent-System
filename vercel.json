@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/Backend/index.js" },
+    { "source": "/(.*)", "destination": "/vite-project/$1" }
+  ]
+}
