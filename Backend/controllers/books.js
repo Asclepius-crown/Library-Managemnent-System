@@ -363,21 +363,23 @@ export const toggleFeature = async (req, res) => {
     }
 };
 
-// Get Featured Book
 export const getFeaturedBook = async (req, res) => {
-    try {
-        // Find one random featured book
-        // Using $sample to pick one random one if multiple are featured
-        const featured = await Book.aggregate([
-            { $match: { isFeatured: true } },
-            { $sample: { size: 1 } }
-        ]);
+  try {
+    const book = await Book.findOne({ isFeatured: true });
+    res.json(book);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching featured book" });
+  }
+};
 
-        if (featured.length === 0) {
-            return res.json(null); // No featured book
-        }
-        res.json(featured[0]);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+export const getRandomBook = async (req, res) => {
+  try {
+    const count = await Book.countDocuments();
+    if (count === 0) return res.status(404).json({ message: "No books found" });
+    const random = Math.floor(Math.random() * count);
+    const book = await Book.findOne().skip(random);
+    res.json(book);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching random book" });
+  }
 };

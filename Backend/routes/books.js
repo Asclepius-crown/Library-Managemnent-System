@@ -15,7 +15,8 @@ import {
   deleteGroupedBooks,     // New import
   getIndividualCopies,       // New import
   toggleFeature,
-  getFeaturedBook
+  getFeaturedBook,
+  getRandomBook
 } from "../controllers/books.js";
 
 import { logAudit } from '../middleware/audit.js';
@@ -59,5 +60,8 @@ router.put("/grouped/:groupedId/feature", authMiddleware, checkRole(['admin']), 
 
 // Get Featured Book (Public)
 router.get("/featured", getFeaturedBook);
+
+// Get Random Book (All Users)
+router.get("/random", authMiddleware, getRandomBook);
 
 export default router;
