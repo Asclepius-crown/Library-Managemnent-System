@@ -5,22 +5,7 @@ import { useAuth } from "../component/AuthContext.jsx";
 import logo from "../assets/logo.jpg";
 import Header from "./Common/Catalog/Header";
 import api from "../api/axiosClient";
-
-// Toast notification
-const Toast = ({ message, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-  return (
-    <div
-      className="fixed top-5 right-5 bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-2xl z-50 font-medium animate-fade-in border border-indigo-400/30 backdrop-blur-md"
-      role="alert"
-    >
-      {message}
-    </div>
-  );
-};
+import toast from "react-hot-toast";
 
 // Focus trap
 const useFocusTrap = (ref, active) => {
@@ -63,7 +48,6 @@ export default function LandingPage() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [toastMsg, setToastMsg] = useState(null);
   
   const [featuredBook, setFeaturedBook] = useState(null);
 
@@ -188,7 +172,7 @@ export default function LandingPage() {
     }
     setLoading(false);
     if (result.success) {
-      setToastMsg(activeForm === "login" ? `Welcome back, ${result.user.name}!` : `Welcome, ${result.user.name}!`);
+      toast.success(activeForm === "login" ? `Welcome back, ${result.user.name}!` : `Welcome, ${result.user.name}!`);
       setActiveForm(null);
       navigate("/");
     } else {
@@ -203,8 +187,6 @@ export default function LandingPage() {
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
-
-      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
 
       {/* Header */}
       {isAuthenticated ? (
