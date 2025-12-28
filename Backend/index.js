@@ -16,6 +16,9 @@ import googleBooksRoutes from "./routes/googleBooks.js";
 import usersRoutes from "./routes/users.js"; // Import users routes
 import dashboardRoutes from "./routes/dashboard.js"; // Import dashboard routes
 import reservationRoutes from "./routes/reservations.js";
+import reviewRoutes from "./routes/reviews.js";
+import analyticsRoutes from "./routes/analytics.js";
+import announcementRoutes from "./routes/announcements.js";
 import errorHandler from './middleware/errorHandler.js';
 import { initNotificationScheduler } from './utils/notificationScheduler.js';
 
@@ -54,15 +57,17 @@ app.use("/api/users", usersRoutes);
 app.use("/api/dashboard", dashboardRoutes); // Use dashboard routes
 app.use("/api/google-books", googleBooksRoutes);
 app.use("/api/reservations", reservationRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
 
 // Error Handling Middleware
 app.use(errorHandler);
 
-const PORT = config.PORT || 5000;
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+  app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
 }
 
 export default app;

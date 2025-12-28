@@ -19,8 +19,7 @@ export default function ManageCopiesModal({ show, onClose, groupedBook, fetchBoo
     try {
       const response = await api.get(`/books/copies/${groupedIdString}`);
       setCopies(response.data);
-    } catch (err) {
-      console.error("Failed to fetch individual copies:", err);
+    } catch {
       addToast("Failed to load copies", "error");
     } finally {
       setLoadingCopies(false);
@@ -49,10 +48,9 @@ export default function ManageCopiesModal({ show, onClose, groupedBook, fetchBoo
       addToast("Copy updated successfully", "success");
       setEditingCopyId(null);
       setEditedCopy({});
-      fetchCopies(); // Refresh list
-      fetchBooks(); // Refresh main catalog
-    } catch (err) {
-      console.error("Failed to update copy:", err);
+      fetchCopies();
+      fetchBooks();
+    } catch {
       addToast("Failed to update copy", "error");
     }
   };
@@ -64,27 +62,22 @@ export default function ManageCopiesModal({ show, onClose, groupedBook, fetchBoo
       addToast("Copy deleted successfully", "success");
       fetchCopies();
       fetchBooks();
-    } catch (err) {
-      console.error("Failed to delete copy:", err);
+    } catch {
       addToast("Failed to delete copy", "error");
     }
   };
 
   const handleAddCopy = async () => {
     try {
-      // Inherit metadata from the grouped book for the new copy
       const newBookCopy = {
-        ...groupedBook, // Take all metadata from groupedBook
-        ...newCopyData, // Override with specific new copy data (e.g., status, location)
-        // Ensure _id, totalCopies, availableCopies, derivedStatus, copyIds are NOT sent
+        ...groupedBook,
+        ...newCopyData,
         _id: undefined,
         totalCopies: undefined,
         availableCopies: undefined,
         derivedStatus: undefined,
         copyIds: undefined,
-        // Set default status if not provided, or ensure it's 'Available' for new copies
         status: newCopyData.status || 'Available',
-        // Clear borrower/dueDate for a new copy
         borrower: '',
         dueDate: null
       };
@@ -94,8 +87,7 @@ export default function ManageCopiesModal({ show, onClose, groupedBook, fetchBoo
       setNewCopyData({});
       fetchCopies();
       fetchBooks();
-    } catch (err) {
-      console.error("Failed to add new copy:", err);
+    } catch {
       addToast("Failed to add new copy", "error");
     }
   };

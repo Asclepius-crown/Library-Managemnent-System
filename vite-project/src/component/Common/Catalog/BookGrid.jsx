@@ -3,7 +3,11 @@ import BookCard from "./BookCard";
 import SkeletonCard from "./SkeletonCard";
 import BookDetailsModal from "./BookDetailsModal";
 
-export default function BookGrid({ books, onEdit, onDelete, onBorrow, onReserve, loading, isAdmin, selectedBooks, onSelectBook, onManageCopies, onToggleFeature }) {
+export default function BookGrid({ 
+  books, onEdit, onDelete, onBorrow, onReserve, loading, isAdmin, 
+  selectedBooks, onSelectBook, onManageCopies, onToggleFeature,
+  onToggleWishlist, wishlist // Added wishlist props
+}) {
   const [selectedBook, setSelectedBook] = useState(null);
 
   if (loading) {
@@ -31,7 +35,7 @@ export default function BookGrid({ books, onEdit, onDelete, onBorrow, onReserve,
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up">
         {books.map((book, index) => (
           <div 
-            key={book._id} 
+            key={JSON.stringify(book._id)} 
             className="h-full" 
             style={{ animationDelay: `${index * 50}ms` }}
           >
@@ -47,6 +51,8 @@ export default function BookGrid({ books, onEdit, onDelete, onBorrow, onReserve,
               onSelectBook={onSelectBook} // Pass the selection handler
               onManageCopies={onManageCopies}
               onToggleFeature={onToggleFeature}
+              onToggleWishlist={onToggleWishlist}
+              isInWishlist={wishlist?.includes(book._id)}
             />
           </div>
         ))}

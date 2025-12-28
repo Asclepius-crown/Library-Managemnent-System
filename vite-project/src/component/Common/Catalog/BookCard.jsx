@@ -1,5 +1,5 @@
 import React from "react";
-import { Pencil, Trash2, BookOpen, Settings, Star, Clock } from "lucide-react"; // Removed CheckCircle, XCircle
+import { Pencil, Trash2, BookOpen, Settings, Star, Clock, Heart } from "lucide-react"; // Added Heart
 
 const statusColors = {
   Available: "bg-green-500/10 text-green-400 border-green-500/20",
@@ -17,7 +17,9 @@ const BookCard = React.memo(function BookCard({
   selectedBooks, // This now contains stringified _id objects
   onSelectBook,
   onManageCopies,
-  onToggleFeature 
+  onToggleFeature,
+  onToggleWishlist, // New prop
+  isInWishlist // New prop
 }) {
   const hasImage = Boolean(book.imageUrl);
   const stringifiedBookId = JSON.stringify(book._id); // Stringify book._id for comparison
@@ -98,6 +100,15 @@ const BookCard = React.memo(function BookCard({
                title="Reserve Book"
              >
                <Clock size={24} />
+             </button>
+           )}
+           {onToggleWishlist && !isAdmin && (
+             <button 
+               onClick={(e) => { e.stopPropagation(); onToggleWishlist(book._id); }} 
+               className={`p-3 rounded-full shadow-lg transition transform hover:scale-110 ${isInWishlist ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/30' : 'bg-gray-700 hover:bg-gray-600 text-gray-300 shadow-black/30'}`}
+               title={isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+             >
+               <Heart size={24} fill={isInWishlist ? "currentColor" : "none"} />
              </button>
            )}
         </div>

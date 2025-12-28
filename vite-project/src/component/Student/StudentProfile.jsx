@@ -5,7 +5,7 @@ import Header from "../Common/Catalog/Header";
 import useToast from "../Common/Catalog/useToast";
 import ToastArea from "../Common/Catalog/ToastArea";
 import api from "../../api/axiosClient";
-import { User, Shield, Key, BookOpen, GraduationCap, Building, Calendar, AlertCircle, Clock, Banknote } from 'lucide-react';
+import { User, Shield, Key, BookOpen, GraduationCap, Building, Calendar, AlertCircle, Clock, Banknote, Megaphone } from 'lucide-react';
 
 const StudentProfile = () => {
   const { user: contextUser } = useAuth();
@@ -21,6 +21,7 @@ const StudentProfile = () => {
   const [borrowStats, setBorrowStats] = useState({ total: 0, overdue: 0 });
   const [borrowedBooks, setBorrowedBooks] = useState([]); // List of current borrowings
   const [reservations, setReservations] = useState([]);
+  const [announcements, setAnnouncements] = useState([]); // New state
   const [totalFines, setTotalFines] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +48,11 @@ const StudentProfile = () => {
         const meRes = await api.get('/auth/me');
         setProfileData(meRes.data); // { user, studentProfile }
 
-        // 2. Fetch Borrow Stats & List & Reservations (If Student)
+        // 2. Fetch Announcements
+        const annRes = await api.get('/announcements');
+        setAnnouncements(annRes.data);
+
+        // 3. Fetch Borrow Stats & List & Reservations (If Student)
         if (meRes.data.user.role === 'student') {
             try {
                 const [totalRes, overdueRes, listRes, reservationsRes, allRecordsRes] = await Promise.all([
@@ -70,8 +75,8 @@ const StudentProfile = () => {
                 const total = unpaid.reduce((acc, curr) => acc + curr.fineAmount, 0);
                 setTotalFines(total);
 
-            } catch (e) {
-                console.warn("Could not fetch borrow stats", e);
+            } catch {
+                // Silent catch - borrow stats are optional
             }
         }
       } catch {
@@ -116,7 +121,7 @@ const StudentProfile = () => {
           await api.patch(`/reservations/${id}/cancel`);
           setReservations(prev => prev.filter(r => r._id !== id));
           addToast("Reservation cancelled", "success");
-      } catch (err) {
+      } catch {
           addToast("Failed to cancel reservation", "error");
       }
   };
@@ -205,6 +210,29 @@ const StudentProfile = () => {
                 
                 {/* Left Column: Academic/Detailed Info */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Announcements Section */}
+                    <div className="bg-gradient-to-r from-indigo-900/40 to-cyan-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-xl">
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
+                            <Megaphone size={24} className="text-yellow-400" /> Library Announcements
+                        </h2>
+                        <div className="space-y-4">
+                            {announcements.length > 0 ? announcements.map((ann) => (
+                                <div key={ann._id} className="bg-black/40 p-5 rounded-xl border border-white/5 hover:border-white/10 transition">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-indigo-300 text-lg">{ann.title}</h3>
+                                        <span className="text-[10px] text-gray-500 uppercase tracking-widest bg-gray-800 px-2 py-0.5 rounded">
+                                            {new Date(ann.createdAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-300 text-sm leading-relaxed">{ann.content}</p>
+                                    <p className="text-[10px] text-gray-600 mt-4 text-right italic">— {ann.author}</p>
+                                </div>
+                            )) : (
+                                <p className="text-gray-500 text-center py-4 italic">No new announcements today.</p>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Student Academic Card */}
                     {user?.role === 'student' && (
                         <div className="bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5 shadow-xl">
@@ -268,7 +296,7 @@ const StudentProfile = () => {
                             </h2>
                             <div className="space-y-4">
                                 {reservations.map((res) => (
-                                    <div key={res._id} className="bg-black/20 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                                    <div key={String(res._id)} className="bg-black/20 p-4 rounded-xl flex justify-between items-center border border-white/5">
                                         <div>
                                             <h3 className="font-bold text-white">{res.bookId?.title || "Unknown Book"}</h3>
                                             <p className="text-xs text-gray-500">Reserved on: {new Date(res.createdAt).toLocaleDateString()}</p>
@@ -292,14 +320,13 @@ const StudentProfile = () => {
                                 <BookOpen size={24} /> Current Borrowings
                             </h2>
 
-                            {borrowedBooks.length > 0 ? (
-                                <div className="space-y-4">
-                                    {borrowedBooks.map((book) => {
-                                        const status = getDueStatus(book.dueDate);
-                                        return (
-                                            <div key={book._id} className="bg-black/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-white/5 hover:border-white/10 transition">
-                                                <div>
-                                                    <h3 className="font-bold text-white text-lg">{book.bookTitle}</h3>
+                                                            {borrowedBooks.length > 0 ? (
+                                                            <div className="space-y-4">
+                                                                {borrowedBooks.map((book) => {
+                                                                    const status = getDueStatus(book.dueDate);
+                                                                    return (
+                                                                        <div key={String(book._id)} className="bg-black/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-white/5 hover:border-white/10 transition">
+                                                                            <div>                                                    <h3 className="font-bold text-white text-lg">{book.bookTitle}</h3>
                                                     <p className="text-gray-500 text-sm">Borrowed: {new Date(book.borrowDate).toLocaleDateString()}</p>
                                                     {book.fineAmount > 0 && !book.isFinePaid && (
                                                        <span className="inline-block mt-1 px-2 py-0.5 bg-red-500/20 text-red-300 text-xs rounded border border-red-500/30">
@@ -412,3 +439,5 @@ const StudentProfile = () => {
 };
 
 export default StudentProfile;
+
+

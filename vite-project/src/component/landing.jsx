@@ -105,9 +105,13 @@ export default function LandingPage() {
     const fetchFeatured = async () => {
       try {
         const res = await api.get('/books/featured');
-        setFeaturedBook(res.data);
-      } catch (err) {
-        console.error("Failed to fetch featured book", err);
+        if (res.data && res.data.title) {
+          setFeaturedBook(res.data);
+        } else {
+          setFeaturedBook(null);
+        }
+      } catch {
+        setFeaturedBook(null);
       }
     };
     fetchFeatured();
@@ -297,26 +301,26 @@ export default function LandingPage() {
                {/* Image */}
                <div className="w-48 h-72 flex-shrink-0 shadow-2xl rounded-lg overflow-hidden border border-white/5 transform group-hover:scale-105 transition duration-500">
                   {featuredBook.imageUrl ? (
-                    <img src={featuredBook.imageUrl} alt={featuredBook.title} className="w-full h-full object-cover" />
+                    <img src={String(featuredBook.imageUrl)} alt={String(featuredBook.title)} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-4xl font-bold">{featuredBook.title.charAt(0)}</div>
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-4xl font-bold">{String(featuredBook.title?.charAt(0) || "?")}</div>
                   )}
                </div>
 
                {/* Content */}
                <div className="flex-grow text-center md:text-left">
-                  <h3 className="text-4xl font-bold mb-2 text-white">{featuredBook.title}</h3>
-                  <p className="text-xl text-indigo-400 mb-4 font-medium">{featuredBook.author}</p>
+                  <h3 className="text-4xl font-bold mb-2 text-white">{String(featuredBook.title)}</h3>
+                  <p className="text-xl text-indigo-400 mb-4 font-medium">{String(featuredBook.author)}</p>
                   <p className="text-gray-400 mb-6 leading-relaxed max-w-2xl">
-                    {featuredBook.description || "Dive into this week's featured selection. A masterpiece waiting to be explored."}
+                    {String(featuredBook.description || "Dive into this week's featured selection. A masterpiece waiting to be explored.")}
                   </p>
                   
                   <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                     <span className="px-3 py-1 bg-white/5 rounded-full text-xs font-mono border border-white/10 text-gray-400">
-                      {featuredBook.genre || "General"}
+                      {String(featuredBook.genre || "General")}
                     </span>
                     <span className="px-3 py-1 bg-white/5 rounded-full text-xs font-mono border border-white/10 text-gray-400">
-                      {featuredBook.publishedCount || "N/A"}
+                      {String(featuredBook.publishedCount || "N/A")}
                     </span>
                   </div>
 

@@ -6,7 +6,8 @@ const studentSchema = new mongoose.Schema({
   department: { type: String, required: true },
   yearOfStudy: { type: Number, required: true },
   admissionYear: { type: Number, required: true },
-  email: { type: String, required: true }
+  email: { type: String, required: true },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }]
 }, { timestamps: true });
 
 export default mongoose.model("Student", studentSchema);

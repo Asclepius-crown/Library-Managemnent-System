@@ -8,7 +8,21 @@ const router = express.Router();
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const records = await BorrowedBook.find({});
-    res.json(records);
+    
+    // Update overdue status and fines
+    const updatedRecords = await Promise.all(records.map(async (record) => {
+      if (record.returnStatus === 'Not Returned' && new Date() > new Date(record.dueDate)) {
+        const diffTime = Math.abs(new Date() - new Date(record.dueDate));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        record.returnStatus = 'Overdue';
+        record.fineAmount = diffDays * 1; // $1 per day
+        record.isFinePaid = false;
+        await record.save();
+      }
+      return record;
+    }));
+    
+    res.json(updatedRecords);
   } catch {
     res.status(500).json({ message: 'Server error fetching borrowed records' });
   }

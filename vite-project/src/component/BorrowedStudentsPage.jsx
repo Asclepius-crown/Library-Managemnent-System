@@ -256,7 +256,7 @@ export default function BorrowedStudentsPage() {
                   </tr>
                 ) : (
                   records.map((book) => (
-                    <tr key={book._id} className="hover:bg-[#1a2942] transition-colors">
+                    <tr key={String(book._id)} className="hover:bg-[#1a2942] transition-colors">
                       {user?.role === 'admin' && (
                         <td className="p-4 text-center">
                           <input

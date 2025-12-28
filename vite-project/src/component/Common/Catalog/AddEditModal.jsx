@@ -1,6 +1,7 @@
 // AddEditModal.jsx
 import useFocusTrap from "./useFocusTrap";
 import React from "react";
+import { X } from "lucide-react";
 
 export default function AddEditModal({
   show,

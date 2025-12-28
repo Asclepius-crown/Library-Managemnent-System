@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import api from "../../api/axiosClient";
 import useToast from "../Common/Catalog/useToast";
+import Header from "../Common/Catalog/Header";
 import ToastArea from "../Common/Catalog/ToastArea";
 import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -14,13 +15,14 @@ export default function AdminDashboard() {
     borrowedCount: 0,
     overdueCount: 0,
   });
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { toasts, addToast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toasts, addToast } = useToast();
 
-  // Add User State
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
@@ -28,24 +30,38 @@ export default function AdminDashboard() {
     role: "student",
     rollNo: "",
     branch: "",
-    year: ""
+    year: "",
   });
-  const [adding, setAdding] = useState(false);
+
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
 
   useEffect(() => {
-    if (user && user.role !== "admin") {
-      navigate("/catalog");
+    function handleClickOutside(e) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/login');
     }
   }, [user, navigate]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersRes, statsRes] = await Promise.all([
+      const [usersRes, statsRes, analyticsRes] = await Promise.all([
         api.get("/users"),
         api.get("/dashboard/stats"),
+        api.get("/analytics"),
       ]);
       setUsers(usersRes.data);
       setStats(statsRes.data);
+      setAnalytics(analyticsRes.data);
     } catch {
       addToast("Failed to load dashboard data", "error");
     } finally {
@@ -98,6 +114,13 @@ export default function AdminDashboard() {
       <ToastArea toasts={toasts} />
 
       <div className="max-w-6xl mx-auto">
+        <Header
+          navigate={navigate}
+          showProfileMenu={showProfileMenu}
+          setShowProfileMenu={setShowProfileMenu}
+          profileMenuRef={profileMenuRef}
+        />
+
         <h1 className="text-3xl font-bold mb-6 text-white">Admin Dashboard</h1>
 
         {/* Stats Cards */}
@@ -140,6 +163,54 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Analytics Charts */}
+        {analytics && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className="bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-800">
+              <h3 className="text-lg font-semibold text-white mb-6">Books by Genre</h3>
+              <div className="space-y-4">
+                {analytics.genreStats.map((genre) => (
+                  <div key={genre._id} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">{genre._id || 'Uncategorized'}</span>
+                      <span className="text-white font-medium">{genre.count}</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div 
+                        className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" 
+                        style={{ width: `${(genre.count / analytics.summary.totalBooks) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-800">
+              <h3 className="text-lg font-semibold text-white mb-6">Recent Borrowing Activity</h3>
+              <div className="h-64 flex items-end justify-between gap-1">
+                {analytics.borrowHistory.slice(-14).map((day) => (
+                  <div key={day._id} className="flex-1 flex flex-col items-center gap-2 group">
+                    <div className="relative w-full flex justify-center">
+                      <div 
+                        className="w-4 bg-cyan-500 rounded-t-sm transition-all duration-500 hover:bg-cyan-400 cursor-pointer"
+                        style={{ height: `${(day.count / Math.max(...analytics.borrowHistory.map(d => d.count), 1)) * 200}px` }}
+                      >
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {day.count}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-gray-500 rotate-45 mt-2 origin-left whitespace-nowrap">
+                      {day._id.split('-').slice(1).join('/')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-white">User Management</h2>
           <button 
@@ -172,7 +243,7 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      {u._id !== user?.id && (
+                      {u._id !== user?._id && (
                         <>
                           {u.role === "student" && (
                             <button onClick={() => handleRoleChange(u._id, "admin")} className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded transition">
@@ -186,7 +257,7 @@ export default function AdminDashboard() {
                           )}
                         </>
                       )}
-                      {u._id === user?.id && <span className="text-gray-500 text-xs italic">Current User</span>}
+                      {u._id === user?._id && <span className="text-gray-500 text-xs italic">Current User</span>}
                     </td>
                   </tr>
                 ))}

@@ -10,6 +10,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [studentProfile, setStudentProfile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
@@ -25,10 +26,12 @@ export function AuthProvider({ children }) {
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         const { data } = await api.get("/auth/me");
         setUser(data.user);
+        setStudentProfile(data.studentProfile);
         setIsAuthenticated(true);
       } catch {
         localStorage.removeItem("token");
         setUser(null);
+        setStudentProfile(null);
         setIsAuthenticated(false);
       }
       setLoading(false);
@@ -42,6 +45,10 @@ export function AuthProvider({ children }) {
       localStorage.setItem("token", data.token);
       api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
       setUser(data.user);
+      // After login, fetch full user data including _id and studentProfile
+      const meRes = await api.get("/auth/me");
+      setUser(meRes.data.user);
+      setStudentProfile(meRes.data.studentProfile);
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
@@ -57,7 +64,10 @@ export function AuthProvider({ children }) {
       const { data } = await api.post("/auth/register", { name, email, password });
       localStorage.setItem("token", data.token);
       api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-      setUser(data.user);
+      
+      const meRes = await api.get("/auth/me");
+      setUser(meRes.data.user);
+      setStudentProfile(meRes.data.studentProfile);
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
@@ -85,20 +95,23 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     delete api.defaults.headers.common["Authorization"];
     setUser(null);
+    setStudentProfile(null);
     setIsAuthenticated(false);
   };
 
   const value = useMemo(
     () => ({
       user,
+      studentProfile,
       isAuthenticated,
       loading,
       login,
       register,
       changePassword,
       logout,
+      setStudentProfile, // Allow manual update if needed
     }),
-    [user, isAuthenticated, loading]
+    [user, studentProfile, isAuthenticated, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

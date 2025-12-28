@@ -18,14 +18,16 @@ router.get('/', authMiddleware, checkRole(['admin']), async (req, res) => {
 
 // POST /api/users - Create a new user/student (Admin only)
 router.post('/', authMiddleware, checkRole(['admin']), async (req, res) => {
-  console.log("POST /api/users called with body:", req.body); // Debug Log
   try {
     const { name, email, password, role, rollNo, branch, year } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Missing required fields: name, email, password' });
+    }
 
     // 1. Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log("User already exists:", email); // Debug Log
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
@@ -33,11 +35,10 @@ router.post('/', authMiddleware, checkRole(['admin']), async (req, res) => {
     const user = new User({
       name,
       email,
-      passwordHash: password, // Schema pre-save will hash this
+      passwordHash: password,
       role: role || 'student'
     });
     await user.save();
-    console.log("User saved:", user._id); // Debug Log
 
     // 3. If Student, create Student Profile
     let studentProfile = null;
@@ -46,12 +47,11 @@ router.post('/', authMiddleware, checkRole(['admin']), async (req, res) => {
         name,
         email,
         rollNo,
-        department: branch || 'General', // Map branch -> department
-        yearOfStudy: Number(year) || 1,  // Map year -> yearOfStudy
-        admissionYear: new Date().getFullYear(), // Default admission year
+        department: branch || 'General',
+        yearOfStudy: Number(year) || 1,
+        admissionYear: new Date().getFullYear(),
       });
       await studentProfile.save();
-      console.log("Student profile saved:", rollNo); // Debug Log
     }
 
     res.status(201).json({
@@ -61,8 +61,7 @@ router.post('/', authMiddleware, checkRole(['admin']), async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error creating user:", err); // Debug Log
-    res.status(500).json({ message: 'Server error: ' + err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

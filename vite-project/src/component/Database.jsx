@@ -50,12 +50,11 @@ const DatabasePage = () => {
       try {
         const statsRes = await api.get('/dashboard/stats');
         setStats(statsRes.data);
-      } catch (err) {
-        console.warn("Stats fetch failed", err);
+      } catch {
+        // Stats fetch failed silently
       }
 
     } catch {
-      console.error("Failed to fetch database data");
       addToast("Failed to load data", "error");
     } finally {
       setLoading(false);
@@ -166,7 +165,7 @@ const DatabasePage = () => {
                 ) : (
                   overdueBooks.map((rec) => (
                     <tr
-                      key={rec._id}
+                      key={String(rec._id)}
                       className="hover:bg-cyan-700 transition-colors"
                     >
                       <td className="border border-cyan-600 px-6 py-3 font-medium">{rec.bookTitle}</td>

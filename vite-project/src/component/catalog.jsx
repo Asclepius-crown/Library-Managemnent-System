@@ -40,7 +40,7 @@ const DEBOUNCE_DELAY = 300;
 export default function CatalogPage() {
   const navigate = useNavigate();
   const { toasts, addToast } = useToast();
-  const { user } = useAuth(); // Get user from context
+  const { user, studentProfile, setStudentProfile } = useAuth(); // Updated useAuth
 
   // --- State ---
   const [books, setBooks] = useState([]);
@@ -142,14 +142,9 @@ export default function CatalogPage() {
         setBooks([]);
         setTotalPages(1);
       }
-      setSelectedBooks([]); // Clear selection after fetching new books
+      setSelectedBooks([]);
 
-    } catch (error) {
-      console.error("Error fetching books:", error);
-      if (error.response) {
-        console.error("API Response Status:", error.response.status);
-        console.error("API Response Data:", error.response.data);
-      }
+    } catch {
       addToast("Failed to load books.", "error");
       setBooks([]);
     } finally {
@@ -374,6 +369,27 @@ export default function CatalogPage() {
     }
   }, [fetchBooks, addToast]);
 
+  const handleToggleWishlist = useCallback(async (bookId) => {
+    if (!studentProfile) {
+      addToast("Student profile not found. Please contact admin.", "error");
+      return;
+    }
+    const isInWishlist = studentProfile.wishlist?.includes(bookId);
+    try {
+      if (isInWishlist) {
+        const res = await api.delete('/students/wishlist', { data: { rollNo: studentProfile.rollNo, bookId } });
+        setStudentProfile(res.data);
+        addToast("Removed from wishlist", "info");
+      } else {
+        const res = await api.post('/students/wishlist', { rollNo: studentProfile.rollNo, bookId });
+        setStudentProfile(res.data);
+        addToast("Added to wishlist", "success");
+      }
+    } catch (err) {
+      addToast("Failed to update wishlist", "error");
+    }
+  }, [studentProfile, setStudentProfile, addToast]);
+
   const openChangePasswordModal = useCallback(() => {
     setPasswords({ current: "", newPass: "" });
     setShowProfileMenu(false);
@@ -498,6 +514,8 @@ export default function CatalogPage() {
         onReserve={user?.role === 'student' ? handleReserve : null} // Pass handleReserve
         onManageCopies={user?.role === 'admin' ? handleManageCopies : null} // New prop
         onToggleFeature={user?.role === 'admin' ? handleToggleFeature : null} // New prop
+        onToggleWishlist={user?.role === 'student' ? handleToggleWishlist : null} // New prop
+        wishlist={studentProfile?.wishlist} // New prop
         isAdmin={user?.role === 'admin'}
         selectedBooks={selectedBooks} // Pass stringified selectedBooks
         onSelectBook={handleSelectBook} // Pass selection handler

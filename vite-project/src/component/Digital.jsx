@@ -117,8 +117,7 @@ const DigitalLibraryPage = () => {
         } else {
           setBooks([]);
         }
-      } catch (error) {
-        console.error(error);
+      } catch {
         setLoadingError("Failed to load book data.");
       } finally {
         setLoading(false);
@@ -261,7 +260,7 @@ const DigitalLibraryPage = () => {
 
                 return (
                   <article
-                    key={id}
+                    key={String(id)}
                     className="flex flex-col bg-transparent rounded-lg border border-indigo-700 shadow-md hover:shadow-lg transition-transform duration-300 hover:-translate-y-1"
                   >
                     <div className="relative h-48 overflow-hidden rounded-t-lg">
