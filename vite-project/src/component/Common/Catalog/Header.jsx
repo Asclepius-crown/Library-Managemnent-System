@@ -12,17 +12,21 @@ export default function Header({
   const { user } = useAuth();
 
   return (
-    <header className="flex justify-between items-center mb-6 relative flex-wrap gap-4">
-      {/* Logo + title */}
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-        <img src={logo} alt="Logo" className="h-12 rounded-full" />
-        <h1 className="text-2xl font-bold text-white select-none">
-          Athenaeum
-        </h1>
-      </div>
-      {/* Profile/Actions */}
-      <div className="flex items-center gap-6 flex-wrap">
-        {/* Profile button */}
+    <header className="w-full pt-6 px-4 md:px-12 relative z-40">
+      <div className="flex justify-between items-center">
+        {/* Logo + title */}
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/")}>
+          <div className="relative">
+            <div className="absolute inset-0 bg-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <img src={logo} alt="Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full relative z-10 border-2 border-transparent group-hover:border-cyan-500/50 transition-all" />
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold text-white select-none tracking-tight group-hover:text-cyan-400 transition-colors">
+            Athenaeum
+          </h1>
+        </div>
+        {/* Profile/Actions */}
+        <div className="flex items-center gap-6">
+          {/* Profile button */}
         <div className="relative" ref={profileMenuRef}>
           <button
             onClick={() => setShowProfileMenu((prev) => !prev)}
@@ -133,6 +137,7 @@ export default function Header({
             </div>
           )}
         </div>
+      </div>
       </div>
     </header>
   );

@@ -1,333 +1,249 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Menu } from "lucide-react"; // Added Menu icon
+import { Search, BookOpen, Download, Star, Filter, ArrowRight, ExternalLink } from "lucide-react";
 import api from "../api/axiosClient";
-import Header from "./Common/Catalog/Header"; // Import shared Header
+import Header from "./Common/Catalog/Header";
 
-// Sidebar reusable component
-const SidebarSection = ({
-  title,
-  items,
-  selectedItem,
-  onSelect,
-  interactive = true,
-}) => (
-  <section className="mb-8" aria-label={title}>
-    <h3 className="text-gray-300 border-b border-gray-700 pb-2 mb-4 font-semibold">
-      {title}
-    </h3>
-    <ul>
-      {items.map((item) => (
-        <li key={item}>
-          {interactive ? (
-            <button
-              type="button"
-              aria-current={selectedItem === item ? "true" : undefined}
-              aria-pressed={selectedItem === item}
-              onClick={() => onSelect(item)}
-              className={`w-full text-left py-2 rounded
-                ${
-                  selectedItem === item
-                    ? "text-blue-400 font-semibold"
-                    : "text-gray-400 hover:text-blue-400"
-                }
-                focus:outline-none focus:text-blue-400 focus:ring-2 focus:ring-blue-400`}
-            >
-              {item}
-            </button>
-          ) : (
-            <span
-              className="text-gray-500 select-none cursor-default block py-2"
-              aria-disabled="true"
-            >
-              {item}
-            </span>
-          )}
-        </li>
-      ))}
-    </ul>
-  </section>
+// --- Components ---
+
+const TagCloud = ({ tags, selected, onSelect }) => (
+  <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide px-4 md:px-12 select-none">
+    {tags.map((tag) => (
+      <button
+        key={tag}
+        onClick={() => onSelect(tag)}
+        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border ${
+          selected === tag
+            ? "bg-cyan-500 text-black border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+            : "bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white"
+        }`}
+      >
+        {tag}
+      </button>
+    ))}
+  </div>
 );
 
-// Data arrays
-const categories = [
-  "All",
-  "Mechanical Engineering",
-  "Electrical Engineering",
-  "Computer Engineering",
-  "Civil Engineering",
-  "Chemical Engineering",
-  "Aerospace Engineering",
-  "Biomedical Engineering",
-  "Environmental Engineering",
-];
+const HeroSection = ({ book }) => {
+  if (!book) return null;
+  const imageSrc = book.volumeInfo?.imageLinks?.extraLarge || book.volumeInfo?.imageLinks?.thumbnail || "https://via.placeholder.com/300x450";
 
-const fileTypes = ["All"];
+  return (
+    <div className="relative w-full h-[500px] md:h-[400px] bg-gradient-to-r from-gray-900 to-indigo-950 overflow-hidden mb-12 rounded-3xl mx-4 md:mx-12 w-auto shadow-2xl border border-white/5">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+      <div className="relative z-10 flex flex-col md:flex-row items-center h-full p-8 md:p-12 gap-8">
+        <div className="w-full md:w-1/3 flex justify-center md:justify-end">
+          <img 
+            src={imageSrc} 
+            alt={book.volumeInfo.title} 
+            className="h-48 md:h-72 w-auto object-cover rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.5)] transform rotate-[-5deg] hover:rotate-0 transition-transform duration-500"
+          />
+        </div>
+        <div className="w-full md:w-2/3 text-center md:text-left space-y-4">
+          <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
+            Featured Resource
+          </span>
+          <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight line-clamp-2">
+            {book.volumeInfo.title}
+          </h2>
+          <p className="text-gray-400 text-sm md:text-base max-w-xl line-clamp-3">
+            {book.volumeInfo.description || "No description available for this title. Click below to explore more details about this resource."}
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start pt-4">
+            <a 
+              href={book.volumeInfo.previewLink} 
+              target="_blank" 
+              rel="noreferrer"
+              className="px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-full transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/20"
+            >
+              <BookOpen size={20} /> Read Now
+            </a>
+            <button className="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-full border border-gray-600 transition-all flex items-center gap-2">
+              <Star size={20} className="text-yellow-500" /> Save to List
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BookCard = ({ book }) => {
+  const info = book.volumeInfo;
+  const imageSrc = info.imageLinks?.thumbnail || "https://via.placeholder.com/128x192?text=No+Cover";
+  
+  return (
+    <div className="group relative bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-600 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+      {/* Image Container */}
+      <div className="aspect-[2/3] w-full overflow-hidden relative">
+        <img 
+          src={imageSrc} 
+          alt={info.title} 
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
+        
+        {/* Hover Action Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm gap-2">
+          <a 
+            href={info.previewLink}
+            target="_blank"
+            rel="noreferrer"
+            className="p-3 bg-cyan-500 text-black rounded-full hover:scale-110 transition-transform shadow-lg"
+            title="Read Now"
+          >
+            <BookOpen size={20} />
+          </a>
+          <button className="p-3 bg-white text-black rounded-full hover:scale-110 transition-transform shadow-lg" title="More Info">
+            <ExternalLink size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-4 space-y-2">
+        <h3 className="text-white font-bold text-lg leading-tight line-clamp-1" title={info.title}>
+          {info.title}
+        </h3>
+        <p className="text-gray-400 text-sm line-clamp-1">
+          {info.authors?.join(", ") || "Unknown Author"}
+        </p>
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-1 text-yellow-500 text-xs">
+             <Star size={12} fill="currentColor" />
+             <span>{info.averageRating || "4.5"}</span>
+          </div>
+          <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700">
+             {book.accessInfo?.epub?.isAvailable ? "EPUB" : "PDF"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Main Page ---
 
 const DigitalLibraryPage = () => {
   const navigate = useNavigate();
 
-  // Component state
+  // State
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingError, setLoadingError] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedType, setSelectedType] = useState("All");
-
-  const [menuOpen, setMenuOpen] = useState(false);
   
   // Header State
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
 
-  // Close header menu on click outside
+  // Constants
+  const categories = [
+    "All", "Computer Science", "Artificial Intelligence", "Space", 
+    "Robotics", "Physics", "Mathematics", "History", "Fiction", "Design"
+  ];
+
+  // Fetch Logic
+  const fetchBooks = useCallback(async (q, category) => {
+    setLoading(true);
+    try {
+      const query = category !== "All" ? `${q} subject:${category}` : q;
+      const res = await api.post(`/google-books`, { q: query || "technology" });
+      setBooks(res.data.items || []);
+    } catch (error) {
+      console.error("Failed to fetch books", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial Fetch & Category Change
   useEffect(() => {
-    function handleClickOutside(e) {
+    fetchBooks(searchQuery, selectedCategory);
+  }, [selectedCategory, fetchBooks]); // removed searchQuery from dep to avoid debounce issues, handles via Enter
+
+  // Header Click Outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
         setShowProfileMenu(false);
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch books data triggered by user actions
-  const fetchBooks = useCallback(
-    async (q, category, type) => {
-      setLoading(true);
-      setLoadingError(null);
-      try {
-        // Combine search query with category filter for better search results
-        const queryWithCategory =
-          category && category !== "All" ? `${q} ${category}` : q;
-
-        const body = {
-          q: queryWithCategory?.trim() || "programming",
-          type: type !== "All" ? type : undefined,
-        };
-
-        const response = await api.post(`/google-books`, body, {
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (response.data?.items) {
-          setBooks(response.data.items);
-        } else {
-          setBooks([]);
-        }
-      } catch {
-        setLoadingError("Failed to load book data.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  // Fetch default books on mount
-  useEffect(() => {
-    fetchBooks("programming", "All", "All");
-  }, [fetchBooks]);
-
-  // Fetch books reactively when searchQuery, selectedCategory or selectedType changes
-  useEffect(() => {
-    fetchBooks(searchQuery, selectedCategory, selectedType);
-  }, [searchQuery, selectedCategory, selectedType, fetchBooks]);
-
-  // User action handlers
-  const onSearchClick = () => {
-    fetchBooks(searchQuery, selectedCategory, selectedType);
-    setMenuOpen(false); // close sidebar on search
-  };
-
-  const toggleMenu = () => setMenuOpen((v) => !v);
-
-  // Filter out invalid books
-  const filteredBooks = useMemo(() => books.filter(Boolean), [books]);
-
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-tr from-indigo-900 to-black text-gray-200 font-sans">
-      {/* Shared Header */}
-      <div className="px-4 py-2 bg-gray-900 shadow-md z-50">
-        <Header 
-          navigate={navigate}
-          showProfileMenu={showProfileMenu}
-          setShowProfileMenu={setShowProfileMenu}
-          profileMenuRef={profileMenuRef}
-        />
-      </div>
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30">
+      <Header 
+        navigate={navigate}
+        showProfileMenu={showProfileMenu}
+        setShowProfileMenu={setShowProfileMenu}
+        profileMenuRef={profileMenuRef}
+      />
 
-      {/* Toolbar: Hamburger + Search */}
-      <div className="bg-gray-800/50 border-b border-gray-700 p-4 flex items-center gap-4 sticky top-0 z-40 backdrop-blur-md">
-        <button
-          onClick={toggleMenu}
-          aria-label={menuOpen ? "Close sidebar" : "Open sidebar"}
-          className="p-2 rounded hover:bg-gray-700 transition focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <Menu size={24} />
-        </button>
-
-        <div className="flex-1 max-w-lg relative flex items-center">
+      {/* Toolbar */}
+      <div className="px-4 md:px-12 mb-8 sticky top-4 z-30">
+        <div className="relative max-w-2xl mx-auto">
           <input
-            type="search"
-            className="w-full rounded-full bg-gray-900 border border-gray-600 py-2 pl-10 pr-4 focus:border-blue-400 outline-none transition text-sm sm:text-base"
-            placeholder="Search resources..."
+            type="text"
+            placeholder="Search the Digital Knowledge Vault..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSearchClick();
-            }}
+            onKeyDown={(e) => e.key === "Enter" && fetchBooks(searchQuery, selectedCategory)}
+            className="w-full bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-full py-3 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-xl transition-all"
           />
-          <Search
-            className="absolute left-3 top-2.5 text-gray-500 pointer-events-none"
-            size={18}
-          />
+          <Search className="absolute left-4 top-3.5 text-gray-500" size={20} />
+          <div className="absolute right-2 top-2 p-1.5 bg-gray-800 rounded-full border border-gray-700">
+            <Filter size={16} className="text-gray-400" />
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-1 relative overflow-hidden">
-        {/* Sidebar */}
-        <nav
-          className={`w-64 bg-indigo-900 border-r border-indigo-700 p-5 overflow-y-auto fixed top-[130px] bottom-0 left-0 z-30 flex flex-col transform transition-transform duration-300 ${
-            menuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-          aria-label="sidebar navigation"
-          aria-hidden={!menuOpen}
-          style={{
-            height: "calc(100vh - 130px)", // adjusted for header + toolbar
-          }}
-        >
-          <SidebarSection
-            title="Engineering Disciplines"
-            items={categories}
-            selectedItem={selectedCategory}
-            onSelect={(c) => {
-              setSelectedCategory(c);
-              setMenuOpen(false);
-            }}
-            interactive
-          />
-          <SidebarSection
-            title="Resource Types"
-            items={fileTypes}
-            selectedItem={selectedType}
-            onSelect={(t) => {
-              setSelectedType(t);
-              setMenuOpen(false);
-            }}
-            interactive
-          />
-        </nav>
+      {/* Categories */}
+      <TagCloud 
+        tags={categories} 
+        selected={selectedCategory} 
+        onSelect={setSelectedCategory} 
+      />
 
-        {/* Overlay to close sidebar */}
-        {menuOpen && (
-          <div
-            className="fixed inset-0 z-20 bg-black bg-opacity-50"
-            onClick={() => setMenuOpen(false)}
-            aria-hidden="true"
-          />
-        )}
+      <main className="pb-12 max-w-[1600px] mx-auto">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-96 gap-4">
+            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-400 animate-pulse">Accessing Global Archives...</p>
+          </div>
+        ) : (
+          <>
+            {/* Hero Section (First Book) */}
+            {books.length > 0 && <HeroSection book={books[0]} />}
 
-        {/* Main content */}
-        <main className="flex-grow p-6 overflow-auto">
-          {loading ? (
-            <div className="text-center text-gray-400 py-20">Loading books...</div>
-          ) : loadingError ? (
-            <div className="text-center text-red-500 py-20">{loadingError}</div>
-          ) : filteredBooks.length === 0 ? (
-            <div className="text-center text-gray-400 py-20">No resources found.</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredBooks.map((book) => {
-                const id = book._id || book.id || book.etag || null;
-                if (!id) return null;
-
-                const title = book.title || book.volumeInfo?.title || "Untitled";
-                const authors = book.author
-                  ? [book.author]
-                  : book.authors || book.volumeInfo?.authors || ["Unknown"];
-                const categories = book.category
-                  ? [book.category]
-                  : book.categories || book.volumeInfo?.categories || [];
-                const imageSrc =
-                  book.coverImage ||
-                  book.imageLinks?.thumbnail ||
-                  book.volumeInfo?.imageLinks?.thumbnail ||
-                  "https://via.placeholder.com/128x192?text=No+Image";
-                const type = book.type || book.printType || "Unknown";
-
-                return (
-                  <article
-                    key={String(id)}
-                    className="flex flex-col bg-transparent rounded-lg border border-indigo-700 shadow-md hover:shadow-lg transition-transform duration-300 hover:-translate-y-1"
-                  >
-                    <div className="relative h-48 overflow-hidden rounded-t-lg">
-                      <img
-                        src={imageSrc}
-                        alt={`Cover of ${title}`}
-                        className="object-cover w-full h-full"
-                        loading="lazy"
-                      />
-                      <span className="absolute top-2 right-2 px-2 py-1 bg-black bg-opacity-70 text-xs text-gray-200 rounded select-none">
-                        {type}
-                      </span>
-                    </div>
-                    <div className="flex flex-col flex-grow p-4">
-                      <h3
-                        className="text-blue-400 font-semibold text-lg mb-1 line-clamp-2"
-                        title={title}
-                      >
-                        {title}
-                      </h3>
-                      <p
-                        className="text-gray-400 text-sm truncate"
-                        title={authors.join(", ")}
-                      >
-                        {authors.join(", ")}
-                      </p>
-                      <p
-                        className="text-blue-400 text-xs mt-1"
-                        title={categories[0]}
-                      >
-                        {categories[0]}
-                      </p>
-                      <div className="mt-auto flex gap-3">
-                        <button
-                          type="button"
-                          className="flex-grow bg-blue-600 hover:bg-blue-700 rounded text-white py-2 text-sm"
-                          onClick={() => {
-                            const readUrl = book.previewLink || book.volumeInfo?.previewLink;
-                            if (readUrl) {
-                              window.open(readUrl, "_blank", "noopener,noreferrer");
-                            } else {
-                              alert(`Reading not available for '${title}'`);
-                            }
-                          }}
-                        >
-                          Read Now
-                        </button>
-                        {(type === "eBook" || type === "BOOK") && (
-                          <button
-                            type="button"
-                            className="flex-grow bg-green-600 hover:bg-green-700 rounded text-white py-2 text-sm"
-                            onClick={() =>
-                              alert(`Download '${title}' - placeholder`)
-                            }
-                          >
-                            Download
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+            {/* Grid */}
+            <div className="px-4 md:px-12">
+               <div className="flex items-center justify-between mb-6">
+                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                   <ArrowRight className="text-cyan-500" /> 
+                   {selectedCategory === 'All' ? 'Trending Resources' : `${selectedCategory} Collection`}
+                 </h2>
+                 <span className="text-sm text-gray-500">{books.length} results found</span>
+               </div>
+               
+               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                 {books.slice(1).map((book) => (
+                   <BookCard key={book.id || book.etag} book={book} />
+                 ))}
+               </div>
+               
+               {books.length === 0 && (
+                  <div className="text-center py-20 text-gray-500">
+                    <BookOpen size={48} className="mx-auto mb-4 opacity-20" />
+                    <p>No results found for this query.</p>
+                  </div>
+               )}
             </div>
-          )}
-        </main>
-      </div>
+          </>
+        )}
+      </main>
     </div>
   );
 };

@@ -1,156 +1,77 @@
 import React from "react";
-import { Pencil, Trash2, BookOpen, Settings, Star, Clock, Heart } from "lucide-react"; // Added Heart
-
-const statusColors = {
-  Available: "bg-green-500/10 text-green-400 border-green-500/20",
-  Borrowed: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-};
+import { BookOpen, Star, CheckCircle } from "lucide-react";
 
 const BookCard = React.memo(function BookCard({ 
-  book, 
-  onEdit, 
-  onDelete, 
-  onBorrow, 
-  onReserve, // New prop
-  onViewDetails,
-  isAdmin, 
-  selectedBooks, // This now contains stringified _id objects
-  onSelectBook,
-  onManageCopies,
-  onToggleFeature,
-  onToggleWishlist, // New prop
-  isInWishlist // New prop
+  book, isActive, onClick, onHover, 
+  isAdmin, selectedBooks, onSelectBook 
 }) {
-  const hasImage = Boolean(book.imageUrl);
-  const stringifiedBookId = JSON.stringify(book._id); // Stringify book._id for comparison
-  const isSelected = selectedBooks?.includes(stringifiedBookId); // Check against stringified IDs
-  
-  // Use derivedStatus from backend for display
-  const displayStatus = book.derivedStatus || 'Unknown'; 
-  const isAvailableForBorrow = book.availableCopies > 0;
-  
-  const handleCheckboxChange = (e) => {
-    e.stopPropagation(); 
-    onSelectBook(stringifiedBookId, e.target.checked); // Pass stringified ID
-  };
+  const isSelected = selectedBooks?.includes(JSON.stringify(book._id));
 
   return (
     <div 
-      className={`group relative bg-gray-900/50 backdrop-blur-sm border ${book.isFeatured ? 'border-yellow-500/50 shadow-yellow-500/10' : 'border-white/5'} rounded-xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 flex flex-col h-full cursor-pointer`}
-      onClick={() => onViewDetails(book)} 
+      className={`relative group cursor-pointer transition-all duration-300 ${
+        isActive 
+          ? "ring-2 ring-cyan-500 scale-105 z-10 shadow-[0_0_30px_rgba(6,182,212,0.3)] bg-gray-800" 
+          : "hover:bg-gray-800 opacity-80 hover:opacity-100 hover:scale-105"
+      } rounded-xl overflow-hidden bg-gray-900 border border-white/5 h-full`}
+      onMouseEnter={() => onHover(book)}
+      onClick={() => onClick(book)}
     >
-      
-      {/* Selection Checkbox (Admin Only) */}
+      {/* Selection Checkbox (Admin) */}
       {isAdmin && (
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-          <input 
-            type="checkbox" 
-            className="form-checkbox h-5 w-5 text-indigo-600 transition duration-150 ease-in-out bg-gray-800 border-gray-600 rounded focus:ring-indigo-500"
-            checked={isSelected}
-            onChange={handleCheckboxChange}
-            aria-label={`Select book ${book.title}`}
-          />
-          {onToggleFeature && (
-            <button
-                onClick={(e) => { e.stopPropagation(); onToggleFeature(book); }}
-                className={`p-1 rounded-full ${book.isFeatured ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-400 hover:text-yellow-400'}`}
-                title="Toggle Feature (Book of the Week)"
-            >
-                <Star size={14} fill={book.isFeatured ? "currentColor" : "none"} />
-            </button>
-          )}
+         <div 
+           className="absolute top-2 left-2 z-20"
+           onClick={(e) => e.stopPropagation()}
+         >
+            <input 
+              type="checkbox" 
+              checked={isSelected}
+              onChange={(e) => onSelectBook(JSON.stringify(book._id), e.target.checked)}
+              className="w-4 h-4 rounded border-gray-600 bg-black/50 text-cyan-500 focus:ring-0 cursor-pointer"
+            />
+         </div>
+      )}
+
+      {/* Featured Marker */}
+      {book.isFeatured && (
+        <div className="absolute top-0 right-0 p-2 z-10">
+           <Star size={12} className="text-yellow-400 fill-current drop-shadow-md" />
         </div>
       )}
 
-      {/* Image Area with Overlay */}
-      <div className="relative w-full h-56 bg-gray-800 overflow-hidden">
-        {hasImage ? (
-          <img 
-            src={book.imageUrl} 
-            alt={book.title} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-          />
+      {/* Image Container */}
+      <div className="aspect-[2/3] w-full relative overflow-hidden">
+        {book.imageUrl ? (
+           <img 
+             src={book.imageUrl} 
+             alt={book.title} 
+             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+             loading="lazy"
+           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-gray-700 bg-gradient-to-br from-gray-800 to-gray-900">
-            {book.title ? book.title.charAt(0).toUpperCase() : "?"}
-          </div>
+           <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 text-gray-600 p-4 text-center">
+              <BookOpen size={24} className="mb-2 opacity-50" />
+              <span className="text-xs font-bold line-clamp-2">{book.title}</span>
+           </div>
         )}
         
-        {/* Fallback */}
-        <div className="hidden absolute inset-0 bg-gray-800 items-center justify-center text-5xl font-bold text-gray-700">
-           {book.title ? book.title.charAt(0).toUpperCase() : "?"}
-        </div>
-
-        {/* Hover Overlay with Quick Actions */}
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
-           {onBorrow && isAvailableForBorrow && (
-             <button 
-               onClick={(e) => { e.stopPropagation(); onBorrow(book.copyIds[0]); }} 
-               className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-full text-white shadow-lg shadow-indigo-500/30 transition transform hover:scale-110"
-               title="Borrow Now"
-             >
-               <BookOpen size={24} />
-             </button>
-           )}
-           {onReserve && !isAvailableForBorrow && (
-             <button 
-               onClick={(e) => { e.stopPropagation(); onReserve(book); }} 
-               className="p-3 bg-amber-600 hover:bg-amber-500 rounded-full text-white shadow-lg shadow-amber-500/30 transition transform hover:scale-110"
-               title="Reserve Book"
-             >
-               <Clock size={24} />
-             </button>
-           )}
-           {onToggleWishlist && !isAdmin && (
-             <button 
-               onClick={(e) => { e.stopPropagation(); onToggleWishlist(book._id); }} 
-               className={`p-3 rounded-full shadow-lg transition transform hover:scale-110 ${isInWishlist ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/30' : 'bg-gray-700 hover:bg-gray-600 text-gray-300 shadow-black/30'}`}
-               title={isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-             >
-               <Heart size={24} fill={isInWishlist ? "currentColor" : "none"} />
-             </button>
-           )}
-        </div>
+        {/* Active Overlay Gradient */}
+        <div className={`absolute inset-0 bg-gradient-to-t from-cyan-900/40 to-transparent transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
       </div>
 
-      {/* Content Area */}
-      <div className="p-5 flex flex-col flex-grow">
-        <div className="flex-grow">
-          {/* Status Badge */}
-          <div className="flex justify-between items-start mb-3">
-             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusColors[displayStatus] || 'text-gray-400 border-gray-700'}`}>
-               {displayStatus} ({book.availableCopies}/{book.totalCopies})
-             </span>
-             {book.publishedCount && <span className="text-[10px] text-gray-500 font-mono">{book.publishedCount}</span>}
-          </div>
-
-          <h3 className="font-bold text-lg leading-snug text-white mb-1 line-clamp-2 group-hover:text-indigo-400 transition-colors" title={book.title}>
-            {book.title}
-          </h3>
-          <p className="text-sm text-gray-400 font-medium mb-3 line-clamp-1">{book.author}</p>
-        </div>
-        
-        {/* Admin/User Actions (Edit, Delete, Manage Copies) */}
-        {(onEdit || onDelete || onManageCopies) && isAdmin && ( // Only show admin actions for admin
-          <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            {onEdit && (
-              <button onClick={(e) => { e.stopPropagation(); onEdit(book); }} className="p-2 text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 rounded transition" title="Edit Book Metadata">
-                <Pencil size={16} />
-              </button>
+      {/* Minimal Footer */}
+      <div className="p-3">
+         <h3 className={`text-sm font-bold leading-tight line-clamp-1 ${isActive ? 'text-cyan-400' : 'text-gray-300'}`}>
+           {book.title}
+         </h3>
+         <div className="flex justify-between items-center mt-1">
+            <span className="text-xs text-gray-500 truncate max-w-[70%]">{book.author}</span>
+            {book.availableCopies > 0 ? (
+               <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]" title="Available"></div>
+            ) : (
+               <div className="w-2 h-2 rounded-full bg-red-500" title="Out of Stock"></div>
             )}
-            {onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete(book._id); }} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded transition" title="Delete All Copies">
-                <Trash2 size={16} />
-              </button>
-            )}
-            {onManageCopies && (
-              <button onClick={(e) => { e.stopPropagation(); onManageCopies(book); }} className="p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded transition" title="Manage Individual Copies">
-                <Settings size={16} />
-              </button>
-            )}
-          </div>
-        )}
+         </div>
       </div>
     </div>
   );
