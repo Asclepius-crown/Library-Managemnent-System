@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
       setUser(meRes.data.user);
       setStudentProfile(meRes.data.studentProfile);
       setIsAuthenticated(true);
-      return { success: true };
+      return { success: true, user: meRes.data.user };
     } catch (error) {
       return {
         success: false,
@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
       setUser(meRes.data.user);
       setStudentProfile(meRes.data.studentProfile);
       setIsAuthenticated(true);
-      return { success: true };
+      return { success: true, user: meRes.data.user };
     } catch (error) {
       return {
         success: false,

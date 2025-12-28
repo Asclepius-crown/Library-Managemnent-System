@@ -188,7 +188,7 @@ export default function LandingPage() {
     }
     setLoading(false);
     if (result.success) {
-      setToastMsg(activeForm === "login" ? `Welcome back!` : `Account created!`);
+      setToastMsg(activeForm === "login" ? `Welcome back, ${result.user.name}!` : `Welcome, ${result.user.name}!`);
       setActiveForm(null);
       navigate("/");
     } else {
