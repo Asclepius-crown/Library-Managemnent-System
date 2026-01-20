@@ -89,4 +89,27 @@ router.put('/:id/role', authMiddleware, checkRole(['admin']), async (req, res) =
   }
 });
 
+// DELETE /api/users/:id - Delete a user and associated data (Admin only)
+router.delete('/:id', authMiddleware, checkRole(['admin']), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete associated Student profile if it exists
+    if (user.role === 'student') {
+      await Student.findOneAndDelete({ email: user.email });
+    }
+
+    // Delete the User
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'User and associated data deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

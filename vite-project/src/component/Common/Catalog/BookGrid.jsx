@@ -12,22 +12,32 @@ export default function BookGrid({
   const [activeBook, setActiveBook] = useState(null);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [isLocked, setIsLocked] = useState(false);
 
-  // Set initial active book
+  // Set initial active book and reset lock on data change
   useEffect(() => {
-    if (books.length > 0 && !activeBook) {
+    if (books.length > 0) {
       setActiveBook(books[0]);
+      setIsLocked(false);
+    } else {
+      setActiveBook(null);
     }
   }, [books]);
 
   const handleBookHover = (book) => {
-    if (window.innerWidth >= 768) {
+    if (window.innerWidth >= 768 && !isLocked) {
        setActiveBook(book);
     }
   };
 
   const handleBookClick = (book) => {
-    setActiveBook(book);
+    if (activeBook?._id === book._id && isLocked) {
+      setIsLocked(false); // Unlock if clicking the same locked book
+    } else {
+      setActiveBook(book);
+      setIsLocked(true); // Lock selection on click
+    }
+    
     if (window.innerWidth < 768) {
        setIsMobileDrawerOpen(true);
     }
