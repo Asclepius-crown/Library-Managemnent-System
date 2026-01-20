@@ -1,0 +1,7 @@
+{
+  "name": "library-app",
+  "private": true,
+  "scripts": {
+    "build": "cd vite-project && npm install && npm run build && cd ../Backend && npm install"
+  }
+}
