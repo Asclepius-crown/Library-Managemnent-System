@@ -1,25 +1,32 @@
 import express from 'express';
 import BorrowedBook from '../models/BorrowedBook.js';
-import Student from '../models/Student.js'; // Import Student model
+import Student from '../models/Student.js';
+import Book from '../models/Book.js';
+import SystemConfig from '../models/SystemConfig.js';
 import authMiddleware from '../middleware/auth.js';
-import checkRole from '../middleware/role.js'; // Import role middleware
-import nodemailer from 'nodemailer';
-import cron from 'node-cron';
+import checkRole from '../middleware/role.js';
+import { checkReservationsAndNotify } from '../utils/notificationScheduler.js';
 
 const router = express.Router();
 
-const statusClasses = ["Overdue", "Returned", "Not Returned"];
 
-// Helper: Mark overdue
-function applyOverdueStatus(record) {
-  const today = new Date();
-  if (record.returnStatus !== 'Returned' && new Date(record.dueDate) < today) {
-    record.returnStatus = 'Overdue';
+// Helper: Calculate Fine (Idea 1 & 4)
+// Idea 1: Critical Resource Logic (Higher rates for Core books)
+// Idea 4: Exponential Backoff (Higher rates for longer delays)
+const calculateFine = (diffDays, isCore) => {
+  const baseRate = isCore ? 20 : 5; 
+  let fine = 0;
+
+  if (diffDays <= 3) {
+    fine = diffDays * (baseRate * 0.2); // Grace/Warning period (20% of base)
+  } else if (diffDays <= 7) {
+    fine = (3 * (baseRate * 0.2)) + ((diffDays - 3) * baseRate);
+  } else {
+    fine = (3 * (baseRate * 0.2)) + (4 * baseRate) + ((diffDays - 7) * (baseRate * 2)); // Punitive (200% of base)
   }
-  return record;
-}
-
-// Email transporter (configure for your email) - REMOVED (Moved to utils/notificationScheduler.js)
+  
+  return Math.ceil(fine);
+};
 
 // GET with pagination, filtering, search, sorting
 // Secured: Admins see all, Students see only their own
@@ -32,7 +39,6 @@ router.get('/', authMiddleware, async (req, res, next) => {
     if (req.user.role === 'student') {
       const student = await Student.findOne({ email: req.user.email });
       if (!student) {
-        // If no linked student profile found, return empty result
         return res.json({ total: 0, page: Number(page), limit: Number(limit), records: [] });
       }
       query.studentId = student.rollNo;
@@ -41,7 +47,6 @@ router.get('/', authMiddleware, async (req, res, next) => {
     if (status) query.returnStatus = status;
     if (search) {
       const searchRegex = { $regex: search, $options: 'i' };
-      // If student, restrict search to bookTitle (since name/id is fixed)
       if (req.user.role === 'student') {
         query.bookTitle = searchRegex;
       } else {
@@ -63,23 +68,113 @@ router.get('/', authMiddleware, async (req, res, next) => {
 
     const total = await BorrowedBook.countDocuments(query);
     let records = await BorrowedBook.find(query)
+      .populate('bookId') // Populate to get book details for fine calc
       .sort(sortObj)
       .skip((page - 1) * limit)
-      .limit(parseInt(limit))
-      .lean();
+      .limit(parseInt(limit));
 
-    records = records.map(applyOverdueStatus);
+    // Update overdue status and ESTIMATED fines dynamically for display
+    // Note: We don't save to DB on every GET to avoid write spikes, 
+    // but we return the calculated values. Or we can save if it's critical.
+    // For now, let's update in memory for the response, and only save if status changes.
+    
+    const processedRecords = await Promise.all(records.map(async (record) => {
+      // If overdue and not returned
+      if (record.returnStatus !== 'Returned' && new Date() > new Date(record.dueDate)) {
+        const diffTime = Math.abs(new Date() - new Date(record.dueDate));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let isCore = false;
+        if (record.bookId && record.bookId.isCore) {
+            isCore = record.bookId.isCore;
+        } else if (!record.bookId) {
+             // Fallback lookup if bookId missing
+             const book = await Book.findOne({ title: record.bookTitle });
+             if (book) isCore = book.isCore;
+        }
 
-    res.json({ total, page: Number(page), limit: Number(limit), records });
+        const newFine = calculateFine(diffDays, isCore);
+        
+        // We update the record object for the response
+        record.returnStatus = 'Overdue';
+        record.fineAmount = newFine;
+        
+        // Optional: Persist to DB if status wasn't overdue before
+        if (record.isModified('returnStatus') || record.isModified('fineAmount')) {
+            await record.save();
+        }
+      }
+      return record;
+    }));
+
+    res.json({ total, page: Number(page), limit: Number(limit), records: processedRecords });
   } catch (err) {
     next(err);
   }
 });
 
 // ADMIN ONLY ROUTES
+// Create Borrow Record (Idea 2 & 3: Exam Mode & Final Year Priority)
 router.post('/', authMiddleware, checkRole(['admin']), async (req, res, next) => {
   try {
-    const record = new BorrowedBook(req.body);
+    const { studentId, bookTitle, borrowDate, bookId } = req.body;
+    let finalDueDate = new Date(req.body.dueDate); 
+
+    // Fetch Student
+    let student = null;
+    if (studentId.match(/^[0-9a-fA-F]{24}$/)) {
+        student = await Student.findById(studentId);
+    }
+    if (!student) {
+        student = await Student.findOne({ rollNo: studentId });
+    }
+
+    // Fetch Book
+    let book = null;
+    if (bookId) {
+        book = await Book.findById(bookId);
+    }
+    if (!book && bookTitle) {
+        book = await Book.findOne({ title: bookTitle });
+    }
+
+    // Calculate Intelligent Due Date
+    if (student && book) {
+        // Idea 3: Final Year Priority
+        let loanDuration = 14; // Default
+        // If 4th year + Reference/Technical book
+        if (student.yearOfStudy === 4 && (book.category === 'Reference' || book.category === 'Technical' || book.isCore)) {
+            loanDuration = 30;
+        }
+
+        const bDate = new Date(borrowDate || Date.now());
+        // Reset finalDueDate based on logic if not manually overridden by admin (or we force logic)
+        // Let's assume we want to guide the due date but respect manual input if specifically sent? 
+        // For now, let's recalculate it to enforce the system rules.
+        finalDueDate = new Date(bDate);
+        finalDueDate.setDate(finalDueDate.getDate() + loanDuration);
+
+        // Idea 2: Exam Mode
+        const config = await SystemConfig.findOne({ key: 'main_config' });
+        if (config && config.examPeriods) {
+            for (const period of config.examPeriods) {
+                const start = new Date(period.startDate);
+                const end = new Date(period.endDate);
+                
+                if (finalDueDate >= start && finalDueDate <= end) {
+                    finalDueDate = new Date(end);
+                    finalDueDate.setDate(finalDueDate.getDate() + 1); // Due 1 day after exams
+                }
+            }
+        }
+    }
+
+    const record = new BorrowedBook({
+        ...req.body,
+        dueDate: finalDueDate,
+        bookId: book ? book._id : undefined
+    });
+    
     await record.save();
     res.status(201).json(record);
   } catch (err) {
@@ -87,27 +182,42 @@ router.post('/', authMiddleware, checkRole(['admin']), async (req, res, next) =>
   }
 });
 
+// Update/Return Record
 router.put('/:id', authMiddleware, checkRole(['admin']), async (req, res, next) => {
   try {
     const { returnStatus } = req.body;
     let updateData = { ...req.body };
 
-    // Fine Calculation Logic
+    // Fine Calculation Logic on Return
     if (returnStatus === 'Returned') {
-      const record = await BorrowedBook.findById(req.params.id);
+      const record = await BorrowedBook.findById(req.params.id).populate('bookId');
       if (record) {
+        // Trigger Reservation Notification if returning for the first time
+        if (record.returnStatus !== 'Returned') {
+            const bookId = record.bookId?._id || record.bookId; // Handle populated or unpopulated
+            await checkReservationsAndNotify(bookId, record.bookTitle);
+        }
+
         const today = new Date();
         const due = new Date(record.dueDate);
         
-        // Only calculate fine if returned LATE and it wasn't already calculated
         if (today > due) {
           const diffTime = Math.abs(today - due);
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          const FINE_PER_DAY = 10; // Configuration: 10 units per day
           
-          // If fineAmount is not manually provided, calculate it
+          let isCore = false;
+          if (record.bookId && record.bookId.isCore) {
+             isCore = record.bookId.isCore;
+          } else if (!record.bookId) {
+             const book = await Book.findOne({ title: record.bookTitle });
+             if (book) isCore = book.isCore;
+          }
+
+          // Use the unified calculation helper
+          const calculatedFine = calculateFine(diffDays, isCore);
+          
           if (updateData.fineAmount === undefined) {
-             updateData.fineAmount = diffDays * FINE_PER_DAY;
+             updateData.fineAmount = calculatedFine;
           }
           
           if (updateData.fineAmount > 0) {
@@ -125,14 +235,40 @@ router.put('/:id', authMiddleware, checkRole(['admin']), async (req, res, next) 
   }
 });
 
-router.patch('/:id/pay-fine', authMiddleware, checkRole(['admin']), async (req, res, next) => {
+// Admin Only: Enable/Unlock Payment for Student
+router.patch('/:id/toggle-payment', authMiddleware, checkRole(['admin']), async (req, res, next) => {
   try {
-    const record = await BorrowedBook.findByIdAndUpdate(
-      req.params.id, 
-      { isFinePaid: true }, 
-      { new: true }
-    );
+    const record = await BorrowedBook.findById(req.params.id);
     if (!record) return res.status(404).json({ message: 'Record not found' });
+    
+    record.isPaymentEnabled = !record.isPaymentEnabled; // Toggle
+    await record.save();
+    
+    res.json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Student/Admin: Complete Payment
+router.patch('/:id/pay-fine', authMiddleware, async (req, res, next) => {
+  try {
+    const { paymentMethod } = req.body; // Expect 'Cash' or 'UPI'
+    
+    // Security check: If student is paying, ensure payment is enabled
+    const record = await BorrowedBook.findById(req.params.id);
+    if (!record) return res.status(404).json({ message: 'Record not found' });
+
+    if (req.user.role !== 'admin' && !record.isPaymentEnabled) {
+      return res.status(403).json({ message: 'Payment not enabled by librarian.' });
+    }
+    
+    record.isFinePaid = true;
+    record.isPaymentEnabled = false; // Reset after payment
+    record.paymentMethod = paymentMethod || 'Cash';
+    record.paymentDate = new Date();
+    
+    await record.save();
     res.json(record);
   } catch (err) {
     next(err);

@@ -19,6 +19,7 @@ const bookSchema = new Schema({
   dueDate: Date,
   type: { type: String, enum: ['eBook', 'Audiobook'], default: 'eBook' },
   isFeatured: { type: Boolean, default: false }, // Added featured flag
+  isCore: { type: Boolean, default: false }, // Critical resource flag (Idea 1)
   averageRating: { type: Number, default: 0 },
   totalReviews: { type: Number, default: 0 },
 }, { timestamps: true });

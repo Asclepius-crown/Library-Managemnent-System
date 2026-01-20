@@ -5,7 +5,9 @@ import Header from "../Common/Catalog/Header";
 import ToastArea from "../Common/Catalog/ToastArea";
 import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Book, Users, BookOpen, AlertCircle, PlusCircle } from "lucide-react";
+import { 
+  Book, Users, BookOpen, AlertCircle, PlusCircle 
+} from "lucide-react";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);

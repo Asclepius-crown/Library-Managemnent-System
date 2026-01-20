@@ -19,6 +19,7 @@ import reservationRoutes from "./routes/reservations.js";
 import reviewRoutes from "./routes/reviews.js";
 import analyticsRoutes from "./routes/analytics.js";
 import announcementRoutes from "./routes/announcements.js";
+import adminToolsRoutes from "./routes/adminTools.js";
 import errorHandler from './middleware/errorHandler.js';
 import { initNotificationScheduler } from './utils/notificationScheduler.js';
 
@@ -42,7 +43,9 @@ app.use(cors());
 app.use(express.json());
 
 mongoose
-  .connect(config.MONGO_URI)
+  .connect(config.MONGO_URI, {
+    family: 4, // Force IPv4 to fix ENOTFOUND/DNS issues
+  })
   .then(() => {
     console.log("MongoDB connected");
     initNotificationScheduler();
@@ -60,6 +63,7 @@ app.use("/api/reservations", reservationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/admin-tools", adminToolsRoutes);
 
 app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
 
