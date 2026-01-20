@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import serverless from 'serverless-http';
 
 import config from "./config.js";
 import authRoutes from "./routes/auth.js";
@@ -103,4 +104,4 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   });
 }
 
-export default app;
+export default serverless(app);
