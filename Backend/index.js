@@ -39,7 +39,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-app.use(cors());
+// CORS Configuration
+app.use(cors({
+  origin: "*", // Allow all origins (Change to specific domains in production if needed)
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+app.options('*', cors()); // Enable pre-flight for all routes
+
 app.use(express.json());
 
 mongoose

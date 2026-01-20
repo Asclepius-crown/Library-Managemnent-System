@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/Backend/index.js" },
-    { "source": "/assets/(.*)", "destination": "/vite-project/dist/assets/$1" },
-    { "source": "/(.*)\.(jpg|jpeg|png|svg|ico|json)", "destination": "/vite-project/dist/$1.$2" },
-    { "source": "/(.*)", "destination": "/vite-project/dist/index.html" }
-  ]
-}
