@@ -79,7 +79,8 @@ app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
 app.use(errorHandler);
 
 // Only listen if not running on Vercel (Vercel exports the app)
-if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+// We check for 'VERCEL' env var which is always set by the platform
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
 }
 
