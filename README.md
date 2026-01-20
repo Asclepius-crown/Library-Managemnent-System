@@ -5,12 +5,18 @@
 ![System Status](https://img.shields.io/badge/System-Online-success?style=for-the-badge&logo=statuspage)
 ![Tech Stack](https://img.shields.io/badge/MERN-Stack-blueviolet?style=for-the-badge&logo=react)
 ![UI](https://img.shields.io/badge/UI-Glassmorphism-cyan?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 
 ---
 
 ## 🔮 Overview
 
 **The Athenaeum** is not just a library management system; it is a modern digital interface designed to bridge the gap between physical archives and digital workflows. Built with performance and aesthetics in mind, it features a **Futuristic Glassmorphism UI**, real-time data visualization, and a seamless user experience for both Administrators and Students.
+
+![Dashboard Preview](https://via.placeholder.com/1000x500/0f172a/38bdf8?text=Admin+Dashboard+Preview)
+*(Admin Dashboard showcasing real-time analytics and user management)*
+
+---
 
 ## 🚀 Key Modules
 
@@ -27,6 +33,9 @@ A friction-less browsing experience for students.
 -   **Tunnel-Free Navigation:** Innovative **"Click-to-Lock"** selection mechanism prevents accidental hover switching while viewing details.
 -   **Deep Inspection:** A dedicated "Inspector Pane" for detailed book data, availability status, and actions.
 -   **Tag Cloud:** Quick filtering by engineering disciplines and genres.
+
+![Catalog Preview](https://via.placeholder.com/1000x500/0f172a/c084fc?text=Smart+Catalog+Preview)
+*(Interactive Catalog with live search and detailed book inspector)*
 
 ### 3. 🔐 Security & Access
 -   **Role-Based Access Control (RBAC):** Distinct interfaces for Admins and Students.
@@ -100,13 +109,14 @@ root/
 
 ---
 
-## 🤝 Contribution
+## ⚠️ COPYRIGHT NOTICE
 
-The Athenaeum is an open repository. To contribute:
-1.  Fork the repository.
-2.  Create a feature branch (`git checkout -b feature/Holo-Search`).
-3.  Commit your changes.
-4.  Open a Pull Request.
+**&copy; 2026 The Athenaeum Project by Amit Raj. All Rights Reserved.**
+
+This software and its associated documentation files (the "Software") are the proprietary property of **Amit Raj**.
+
+**Unauthorized copying, modification, distribution, or use of this file or any portion of this project, via any medium, is strictly prohibited.**
+The concepts, design, and implementation contained herein are intellectual property.
 
 ---
 
