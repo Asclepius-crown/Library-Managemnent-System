@@ -7,14 +7,13 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
 import config from "./config.js";
-import authRoutes from "./routes/auth.js"; // Corrected import path
+import authRoutes from "./routes/auth.js";
 import booksRoutes from "./routes/books.js";
 import borrowedRoutes from "./routes/borrowed.js";
-// import overdueRoutes from './routes/overdue.js';
 import studentRoutes from "./routes/students.js";
 import googleBooksRoutes from "./routes/googleBooks.js";
-import usersRoutes from "./routes/users.js"; // Import users routes
-import dashboardRoutes from "./routes/dashboard.js"; // Import dashboard routes
+import usersRoutes from "./routes/users.js";
+import dashboardRoutes from "./routes/dashboard.js";
 import reservationRoutes from "./routes/reservations.js";
 import reviewRoutes from "./routes/reviews.js";
 import analyticsRoutes from "./routes/analytics.js";
@@ -32,8 +31,8 @@ app.use(helmet());
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -41,31 +40,49 @@ app.use(limiter);
 
 // CORS Configuration
 app.use(cors({
-  origin: "*", // Allow all origins (Change to specific domains in production if needed)
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 }));
-app.options('*', cors()); // Enable pre-flight for all routes
+app.options('*', cors());
 
 app.use(express.json());
 
-mongoose
-  .connect(config.MONGO_URI, {
-    family: 4, // Force IPv4 to fix ENOTFOUND/DNS issues
-  })
-  .then(() => {
-    console.log("MongoDB connected");
-    initNotificationScheduler();
-  })
-  .catch((err) => console.error("MongoDB connection error:", err));
+// --- Database Connection Logic (Serverless Compatible) ---
+let isConnected = false;
 
+const connectDB = async () => {
+  if (isConnected) return;
+  
+  try {
+    const db = await mongoose.connect(config.MONGO_URI, {
+      family: 4, 
+    });
+    isConnected = db.connections[0].readyState;
+    console.log("MongoDB connected");
+    
+    // Only init scheduler if we are actually running (not just building)
+    // We can rely on this being called during runtime
+    initNotificationScheduler(); 
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+  }
+};
+
+// Middleware to ensure DB is connected on every request
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
+// --- Routes ---
 app.use("/api/auth", authRoutes);
 app.use("/api/books", booksRoutes);
 app.use("/api/borrowed", borrowedRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/users", usersRoutes);
-app.use("/api/dashboard", dashboardRoutes); // Use dashboard routes
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/google-books", googleBooksRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/reviews", reviewRoutes);
@@ -78,10 +95,12 @@ app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
 // Error Handling Middleware
 app.use(errorHandler);
 
-// Only listen if not running on Vercel (Vercel exports the app)
-// We check for 'VERCEL' env var which is always set by the platform
+// --- Server Start (Local Dev Only) ---
+// If running locally (not imported as a module by Vercel), start listening AND connect immediately
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
-  app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
+  connectDB().then(() => {
+    app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
+  });
 }
 
 export default app;
