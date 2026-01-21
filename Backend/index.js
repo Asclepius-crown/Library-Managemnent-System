@@ -20,8 +20,8 @@ import reviewRoutes from "./routes/reviews.js";
 import analyticsRoutes from "./routes/analytics.js";
 import announcementRoutes from "./routes/announcements.js";
 import adminToolsRoutes from "./routes/adminTools.js";
+import cronRoutes from "./routes/cron.js";
 import errorHandler from './middleware/errorHandler.js';
-import { initNotificationScheduler } from './utils/notificationScheduler.js';
 
 dotenv.config();
 
@@ -63,9 +63,6 @@ const connectDB = async () => {
     isConnected = db.connections[0].readyState;
     console.log("MongoDB connected");
     
-    // Only init scheduler if we are actually running (not just building)
-    // We can rely on this being called during runtime
-    initNotificationScheduler(); 
   } catch (error) {
     console.error("MongoDB connection error:", error);
   }
@@ -90,6 +87,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/admin-tools", adminToolsRoutes);
+app.use("/api/cron", cronRoutes);
 
 app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
 

@@ -83,7 +83,7 @@ export const sendEmail = async (studentEmail, subject, htmlContent) => {
 };
 
 // 1. Overdue Checker
-const checkOverdueBooks = async () => {
+export const checkOverdueBooks = async () => {
   console.log('Running overdue book check...');
   try {
     const today = new Date();
@@ -133,7 +133,7 @@ const checkOverdueBooks = async () => {
 };
 
 // 2. Pre-Due Date Reminder (2 Days Before)
-const checkUpcomingDueBooks = async () => {
+export const checkUpcomingDueBooks = async () => {
   console.log('Running upcoming due book check...');
   try {
     const today = new Date();
@@ -206,13 +206,7 @@ export const checkReservationsAndNotify = async (bookId, bookTitle) => {
   }
 };
 
-// Initialize Scheduler
+// Initialize Scheduler (Deprecated for Vercel - kept for local dev reference or cleanup)
 export const initNotificationScheduler = () => {
-  // Run every day at 9:00 AM
-  cron.schedule('0 9 * * *', () => {
-    checkOverdueBooks();
-    checkUpcomingDueBooks();
-  });
-  
-  console.log('Notification Scheduler initialized (Runs daily at 9 AM).');
+  console.log('Notification Scheduler logic is available for Vercel Cron.');
 };
