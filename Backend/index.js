@@ -22,6 +22,7 @@ import announcementRoutes from "./routes/announcements.js";
 import adminToolsRoutes from "./routes/adminTools.js";
 import cronRoutes from "./routes/cron.js";
 import errorHandler from './middleware/errorHandler.js';
+import path from 'path';
 
 dotenv.config();
 
@@ -51,6 +52,9 @@ app.use(cors({
 app.options('*', cors());
 
 app.use(express.json());
+
+// Serve static files from the built frontend
+app.use(express.static(path.join(process.cwd(), '..', 'vite-project', 'dist')));
 
 // --- Database Connection Logic (Serverless Compatible) ---
 let isConnected = false;
@@ -92,6 +96,11 @@ app.use("/api/admin-tools", adminToolsRoutes);
 app.use("/api/cron", cronRoutes);
 
 app.get("/", (_req, res) => res.send("Athenaeum backend API running"));
+
+// Catch-all handler: send back index.html for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), '..', 'vite-project', 'dist', 'index.html'));
+});
 
 // Error Handling Middleware
 app.use(errorHandler);
