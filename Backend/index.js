@@ -30,12 +30,14 @@ const app = express();
 // Security Middleware
 app.use(helmet());
 
-// Rate Limiting
+// Rate Limiting (skip in serverless/test environments)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting in test/serverless environments
+  skip: (req) => process.env.NODE_ENV === 'test' || process.env.VERCEL,
 });
 app.use(limiter);
 
@@ -98,7 +100,17 @@ app.use(errorHandler);
 // If running locally (not imported as a module by Vercel), start listening AND connect immediately
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   connectDB().then(() => {
-    app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
+    const server = app.listen(config.PORT, () => console.log(`Server listening on port ${config.PORT}`));
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        console.log('Process terminated');
+      });
+    });
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }
 
