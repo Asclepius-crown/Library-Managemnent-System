@@ -22,7 +22,8 @@ import {
 import { logAudit } from '../middleware/audit.js';
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Bulk Upload (Admin)
 router.post("/upload", authMiddleware, checkRole(['admin']), upload.single("file"), logAudit('BULK_UPLOAD_BOOKS'), uploadBooks);

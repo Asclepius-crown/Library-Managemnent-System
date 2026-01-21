@@ -9,6 +9,11 @@ const router = express.Router();
 
 // Helper to update .env file
 const updateEnvFile = (key, value) => {
+  if (process.env.VERCEL) {
+    console.warn("Skipping .env update on Vercel (Read-Only Filesystem).");
+    return true; // Pretend it succeeded to allow memory update
+  }
+
   const envPath = path.resolve(process.cwd(), '.env');
   
   try {

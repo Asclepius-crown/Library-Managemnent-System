@@ -5,19 +5,20 @@ import { normalizeRow, validateAndInsertBooks } from "../utils/bookUtils.js";
 import csvParser from "csv-parser";
 import fs from "fs";
 import XLSX from "xlsx";
+import { Readable } from 'stream';
 
 export const uploadBooks = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     const ext = req.file.originalname.split(".").pop().toLowerCase();
-    const filePath = req.file.path;
     let books = [];
 
     if (ext === "csv") {
       const rows = await new Promise((resolve, reject) => {
         const arr = [];
-        fs.createReadStream(filePath)
+        const stream = Readable.from(req.file.buffer);
+        stream
           .pipe(csvParser())
           .on("data", (row) => {
             arr.push(normalizeRow(row));
@@ -27,16 +28,13 @@ export const uploadBooks = async (req, res) => {
       });
       books = rows;
     } else if (ext === "xlsx" || ext === "xlsm") {
-      const workbook = XLSX.readFile(filePath, { cellDates: true });
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
       books = sheetData.map(normalizeRow);
     } else {
-      fs.unlinkSync(filePath);
       return res.status(400).json({ message: "Unsupported file type" });
     }
-
-    fs.unlinkSync(filePath);
 
     if (!books.length) {
       return res.status(400).json({ message: "No data found in file" });
